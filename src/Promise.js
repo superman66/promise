@@ -1,13 +1,16 @@
 const PROMISE_STATUS = {
-  PENDING: 'pending',
-  RESOLVE: 'resolve',
-  REJECTED: 'rejected',
+  PENDING: 'pending', // 等待态
+  RESOLVE: 'resolve', // 执行态
+  REJECTED: 'rejected', // 拒绝态
 }
 
 function Promise(executor) {
   const self = this
+  // 存放 Promise 当前的状态，共有三种状态
   self.status = PROMISE_STATUS.PENDING
+  // 存放 Promise 的值（eventual value）
   self.data = undefined
+  // 存放Promise回调事件的列表
   self.onResolvedCallbacks = []
   self.onRejectedCallbacks = []
 
@@ -43,6 +46,13 @@ function Promise(executor) {
   }
 }
 
+/**
+ * Promise 解析过程 [[Resolve](promise, x)]
+ * @param {*} promise 
+ * @param {*} x 
+ * @param {*} resolve 
+ * @param {*} reject 
+ */
 function resolvePromise(promise, x, resolve, reject) {
   let then,
     thenCalledOrThrow = false
@@ -73,6 +83,7 @@ function resolvePromise(promise, x, resolve, reject) {
       // 2.3.3.1 将 x.then 赋值给 then
       then = x.then
       // 2.3.3.3 如果 `then` 是函数，将 `x` 作为函数的作用域 `this` 调用之。传递两个回调函数作为参数，第一个参数叫做 `resolvePromise` ，第二个参数叫做 `rejectPromise
+      // 这种 thenable 特性使得 Promise的实现更具有通用性。Promise 只要暴露 then 方法就可以与其他实现的 Promise 共存
       if (typeof then === 'function') {
         then.call(
           x,
@@ -110,9 +121,11 @@ Promise.prototype.then = function(onResolved, onRejected) {
   const self = this
   let promise2
 
-  /**
+  /** 2.2.1.1 和 2.2.1.2
    * onResolve、onRejected 如果不是函数，则必须忽略
-   * 如果 resovle 或者 rejected，则需要返回值或者 reason
+   * 
+   * 因为在 2.2.7.3 中提到，如果 onResolved 不是函数，且 promise1 成功执行，则 promose2 必须成功执行并返回相同的值，所以添加了一个默认返回值的函数
+   * 2.2.7.4 同理
    */
 
   onResolved =
