@@ -12,9 +12,6 @@ function Promise(executor) {
   self.onRejectedCallbacks = []
 
   function resolve(value) {
-    if (value instanceof Promise) {
-      return value.then(resolve, reject)
-    }
     // resolve 和 reject 都要求异步执行
     setTimeout(() => {
       if (self.status === PROMISE_STATUS.PENDING) {
@@ -46,13 +43,13 @@ function Promise(executor) {
   }
 }
 
-function resolvePromise(promise2, x, resolve, reject) {
+function resolvePromise(promise, x, resolve, reject) {
   let then,
     thenCalledOrThrow = false
 
   // 2.3.1 如果 x 与 promise 指向同一个对象，则以 TypeError reject
-  if (x === promise2) {
-    return reject(new TypeError('Chaining cycle detected for Promise'))
+  if (x === promise) {
+    reject(new TypeError('Chaining cycle detected for Promise'))
   }
 
   // 2.3.2 如果 x 为 Promise
@@ -60,7 +57,7 @@ function resolvePromise(promise2, x, resolve, reject) {
     // 2.3.2.1 如果 `x` 处于等待态， `promise` 需保持为等待态直至 `x` 被执行或拒绝
     if (x.status === PROMISE_STATUS.PENDING) {
       x.then(value => {
-        resolvePromise(promise2, value, resolve, reject)
+        resolvePromise(promise, value, resolve, reject)
       }, reject)
     } else {
       // 2.3.2.2：如果 `x` 处于执行态，用相同的值执行 `promise`。
@@ -84,13 +81,13 @@ function resolvePromise(promise2, x, resolve, reject) {
             if (thenCalledOrThrow) return
             thenCalledOrThrow = true
             // 2.3.3.3.1 如果 `resolvePromise` 以值 `y` 为参数被调用，则运行 `[[Resolve]](promise, y)`
-            return resolvePromise(promise2, y, resolve, reject)
+            return resolvePromise(promise, y, resolve, reject)
           },
           function rj(reason) {
             if (thenCalledOrThrow) return
             // 2.3.3.3.2 如果 `rejectPromise` 以据因 `r` 为参数被调用，则以据因 `r` 拒绝 `promise`
             thenCalledOrThrow = true
-            return reject(reason)
+            reject(reason)
           },
         )
       } else {
@@ -101,7 +98,7 @@ function resolvePromise(promise2, x, resolve, reject) {
       if (thenCalledOrThrow) return
       thenCalledOrThrow = true
       // 2.3.3.2 如果取 `x.then` 的值时抛出错误 `e` ，则以 `e` 为据因拒绝 `promise`
-      return reject(error)
+      reject(error)
     }
   } else {
     // 2.3.4  如果 `x` 不为对象或者函数，以 `x` 为参数执行 `promise`
